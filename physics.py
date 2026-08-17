@@ -29,6 +29,13 @@ while True:
         circles=np.round(circles).astype(int)
         chosen=None
         for i in circles[0,:]:
+                        mask=np.zeros(frame.shape[:2],dtype=np.uint8)
+            cv2.circle(mask,(i[0],i[1]),i[2],255,-1)
+            hsvFrame=cv2.cvtColor(frame,cv2.COLOR_BGR2HSV)
+            meanColor=cv2.mean(hsvFrame,mask=mask)
+
+            if not (5 <= meanColor[0] <= 25 and meanColor[1] > 80):
+                continue
             if chosen is None: chosen=i
             if prevCircle is None:
                 prevCircle=chosen
