@@ -1,74 +1,74 @@
 import cv2
 import time
+import datetime
 import numpy as np
+from math import *
 
-cap = cv2.VideoCapture(0)
 
-previous_center = None
-previous_time = None
+cap=cv2.VideoCapture(0)
+prevCircle=None
+dist = lambda x1,y1,x2,y2: sqrt(((x1-x2)**2 + (y1-y2)**2))
+Starttime=time.time()
+speed_conversion=.02/91
+speeds=[]
+accelerations=[]
+
 
 while True:
     _, frame = cap.read()
 
-    grayFrame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    blurFrame = cv2.GaussianBlur(grayFrame, (17, 17), 0)
 
-    circles = cv2.HoughCircles(
-        blurFrame,
-        cv2.HOUGH_GRADIENT,
-        1.2,
-        100,
-        param1=100,
-        param2=30,
-        minRadius=75,
-        maxRadius=400
-    )
+   
+    grayFrame=cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
+    blurFrame=cv2.GaussianBlur(grayFrame,(17,17),0)
+   
 
+
+    circles=cv2.HoughCircles(blurFrame, cv2.HOUGH_GRADIENT, 1.35, 100, param1=110,param2=27,minRadius=70,maxRadius=80)
     if circles is not None:
-        circles = np.round(circles[0, :]).astype("int")
+        circles=np.round(circles).astype(int)
+        chosen=None
+        for i in circles[0,:]:
+            if chosen is None: chosen=i
+            if prevCircle is None:
+                prevCircle=chosen
+            if prevCircle is not None:
+                if dist(chosen[0],chosen[1],prevCircle[0],prevCircle[1]) >= dist(i[0],i[1],prevCircle[0],prevCircle[1]):
+                    chosen=i
+        cv2.circle(frame, (chosen[0], chosen[1]),1,(0,100,0),3)
+        cv2.circle(frame, (chosen[0], chosen[1]),chosen[2],(255,0,0),2)
+        cv2.line(frame,(int(prevCircle[0]), int(prevCircle[1])),(int(chosen[0]), int(chosen[1])),(0, 255, 0),2)
+        elapsedtime=time.time()-Starttime
+        Starttime=time.time()
+        speed=dist(chosen[0],chosen[1],prevCircle[0],prevCircle[1])/elapsedtime
+        m_s_speed=speed*speed_conversion
+        speeds.append(m_s_speed)
+        if len(speeds)>10:
+            del speeds[0:5]
+        average_speed=sum(speeds)/len(speeds)
+        prevCircle=chosen
+        acceleration=average_speed/elapsedtime
+        accelerations.append(acceleration)
+        if len(accelerations)>10:
+            del accelerations[0:5]
+        average_acceleration=sum(accelerations)/len(accelerations)
 
-        # Use the first detected circle
-        x, y, radius = circles[0]
 
-        # Draw circle
-        cv2.circle(frame, (x, y), radius, (0, 255, 0), 2)
+       
 
-        # Draw center
-        cv2.circle(frame, (x, y), 5, (0, 0, 255), -1)
 
-        current_center = (x, y)
-        current_time = time.time()
+        cv2.putText(frame,f'R: {chosen[2]}', (chosen[0]+100,chosen[1]), cv2.FONT_HERSHEY_COMPLEX,1,(0,255,0),2)
+        cv2.putText(frame,f'Speed (m/s): {round(float(average_speed),2)})', (35,35), cv2.FONT_HERSHEY_COMPLEX,1,(0,0,255),2)
+        cv2.putText(frame,f'Acceleration (m/s^2): {round(float(average_acceleration),2)})', (35,75), cv2.FONT_HERSHEY_COMPLEX,1,(255,0,0),2)
+        cv2.imshow("circles",frame)
 
-        if previous_center is not None:
-            # How far the circle moved
-            dx = x - previous_center[0]
-            dy = y - previous_center[1]
-
-            distance = np.sqrt(dx**2 + dy**2)
-
-            # How much time passed
-            time_difference = current_time - previous_time
-
-            # Speed in pixels per second
-            speed = distance / time_difference
-
-            cv2.putText(
-                frame,
-                f"Speed: {speed:.1f} pixels/sec",
-                (20, 40),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                1,
-                (0, 255, 0),
-                2
-            )
-
-        previous_center = current_center
-        previous_time = current_time
-
-    cv2.imshow("Camera", frame)
 
     if cv2.waitKey(1) == ord('q'):
         break
 
+
+print(chosen[2])
 cap.release()
 cv2.destroyAllWindows()
+
+
