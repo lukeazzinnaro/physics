@@ -28,23 +28,29 @@ while True:
     if circles is not None:
         circles=np.round(circles).astype(int)
         chosen=None
-        for i in circles[0,:]:
-                        mask=np.zeros(frame.shape[:2],dtype=np.uint8)
-            cv2.circle(mask,(i[0],i[1]),i[2],255,-1)
-            hsvFrame=cv2.cvtColor(frame,cv2.COLOR_BGR2HSV)
-            meanColor=cv2.mean(hsvFrame,mask=mask)
+        for i in circles[0, :]:
+            mask = np.zeros(frame.shape[:2], dtype=np.uint8)
+            cv2.circle(mask, (i[0], i[1]), i[2], 255, -1)
+            hsvFrame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+            meanColor = cv2.mean(hsvFrame, mask=mask)
 
-            if not (5 <= meanColor[0] <= 25 and meanColor[1] > 80):
+            # White = low saturation, high brightness (hue is irrelevant)
+            if not (meanColor[1] < 60 and meanColor[2] > 150):
                 continue
-            if chosen is None: chosen=i
+            if chosen is None:
+                chosen = i
             if prevCircle is None:
-                prevCircle=chosen
+                prevCircle = chosen
             if prevCircle is not None:
-                if dist(chosen[0],chosen[1],prevCircle[0],prevCircle[1]) >= dist(i[0],i[1],prevCircle[0],prevCircle[1]):
-                    chosen=i
-        cv2.circle(frame, (chosen[0], chosen[1]),1,(0,100,0),3)
-        cv2.circle(frame, (chosen[0], chosen[1]),chosen[2],(255,0,0),2)
-        cv2.line(frame,(int(prevCircle[0]), int(prevCircle[1])),(int(chosen[0]), int(chosen[1])),(0, 255, 0),2)
+                if dist(chosen[0], chosen[1], prevCircle[0], prevCircle[1]) >= dist(i[0], i[1], prevCircle[0], prevCircle[1]):
+                    chosen = i
+
+        if chosen is None:
+            continue
+
+        cv2.circle(frame, (chosen[0], chosen[1]), 1, (0, 100, 0), 3)
+        cv2.circle(frame, (chosen[0], chosen[1]), chosen[2], (255, 0, 0), 2)
+        cv2.line(frame, (int(prevCircle[0]), int(prevCircle[1])), (int(chosen[0]), int(chosen[1])), (0, 255, 0), 2)
         elapsedtime=time.time()-Starttime
         Starttime=time.time()
         speed=dist(chosen[0],chosen[1],prevCircle[0],prevCircle[1])/elapsedtime
@@ -77,5 +83,3 @@ while True:
 print(chosen[2])
 cap.release()
 cv2.destroyAllWindows()
-
-
